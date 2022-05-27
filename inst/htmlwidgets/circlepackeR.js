@@ -42,6 +42,62 @@ HTMLWidgets.widget({
       .append("g")
         .attr("transform", "translate(" + diameter / 2 + "," + diameter / 2 + ")");
 
+
+    function wrap(text, width) {
+      text.each(function() {
+        var text = d3.select(this),
+          words = text.text().split(/\s+/).reverse(),
+          word,
+          line = [],
+          lineNumber = 0,
+          lineHeight = 1.1, // ems
+          y = text.attr("y"),
+          dy = parseFloat(text.attr("dy")),
+          tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+        while (word = words.pop()) {
+          line.push(word);
+          tspan.text(line.join(" "));
+          if (tspan.node().getComputedTextLength() > width) {
+            line.pop();
+            tspan.text(line.join(" "));
+            line = [word];
+            tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", lineHeight + "em").text(word);
+          }
+        }
+      });
+    }
+
+
+
+    function wrap2(text, width) {
+      text.each(function() {
+        var text = d3.select(this),
+            words = text.text().split(/\s+/).reverse(),
+            word,
+            wordCount = 0,
+            line = [],
+            lineNumber = 0,
+            lineHeight = 1.1, // ems
+            y = text.attr("y") !== null ? text.attr('y') : 0,
+            dy = text.attr("dy") !== null ? parseFloat(text.attr("dy")) : 0,
+            tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+          console.info(text.attr("y"));
+        while (word = words.pop()) {
+          line.push(word);
+          tspan.text(line.join(" "));
+          if (wordCount++ >= width) {
+            line.pop();
+            tspan.text(line.join(" "));
+            line = [word];
+            tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+            wordCount = 0;
+          }
+        }
+      });
+    }
+
+
+
     function createViz(root) {
       var focus = root,
           nodes = pack.nodes(root),
@@ -61,6 +117,7 @@ HTMLWidgets.widget({
           .style("fill-opacity", function(d) { return d.parent === root ? 1 : 0; })
           .style("display", function(d) { return d.parent === root ? null : "none"; })
           .text(function(d) { return d.name; });
+          //.call(wrap, 30);
 
       var node = svg.selectAll("circle,text");
 
@@ -71,6 +128,8 @@ HTMLWidgets.widget({
 
       function zoom(d) {
         var focus0 = focus; focus = d;
+
+        Shiny.onInputChange("zoomed", d.name);
 
         var transition = d3.transition()
             .duration(d3.event.altKey ? 7500 : 750)
@@ -84,6 +143,9 @@ HTMLWidgets.widget({
             .style("fill-opacity", function(d) { return d.parent === focus ? 1 : 0; })
             .each("start", function(d) { if (d.parent === focus) this.style.display = "inline"; })
             .each("end", function(d) { if (d.parent !== focus) this.style.display = "none"; });
+
+
+
       }
 
       function zoomTo(v) {
@@ -96,6 +158,9 @@ HTMLWidgets.widget({
     createViz(x.data)
 
     d3.select(self.frameElement).style("height", diameter + "px");
+
+    svg.selectAll('text').call(wrap2, 2);
+
 
   },
 
